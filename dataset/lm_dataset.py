@@ -22,7 +22,7 @@ def pre_processing_chat(conversations, add_system_ratio=0.2):
         "You are a knowledgeable AI. Try your best to provide accurate information.",
         "You are minimind, a small but useful language model."
     ]
-    # 概率性添加system
+    # 核心逻辑：20% 概率在前面补一个 system 消息
     if conversations[0].get('role') != 'system':
         if random.random() < add_system_ratio:
             return [{'role': 'system', 'content': random.choice(SYSTEM_PROMPTS)}] + conversations
