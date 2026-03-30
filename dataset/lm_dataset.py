@@ -72,7 +72,7 @@ class SFTDataset(Dataset):
     def create_chat_prompt(self, conversations):
         messages = []
         tools = None
-        for message in conversations:
+        for message in conversations: # 对数据进行格式化
             message = dict(message)
             if message.get("role") == "system" and message.get("tools"):
                 tools = json.loads(message["tools"]) if isinstance(message["tools"], str) else message["tools"]
@@ -84,12 +84,12 @@ class SFTDataset(Dataset):
             tokenize=False,
             add_generation_prompt=False,
             tools=tools
-        )
+        ) 
 
     def generate_labels(self, input_ids):
-        labels = [-100] * len(input_ids)
+        labels = [-100] * len(input_ids) # 先默认全不读
         i = 0
-        while i < len(input_ids):
+        while i < len(input_ids):     # 逐一寻找 assistant 部分，对于 user token 不算 loss，assistant token 才算 loss
             if input_ids[i:i + len(self.bos_id)] == self.bos_id:
                 start = i + len(self.bos_id)
                 end = start
