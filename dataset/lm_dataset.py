@@ -104,7 +104,7 @@ class SFTDataset(Dataset):
                 i += 1
         return labels
 
-    def __getitem__(self, index):
+    def __getitem__(self, index):    # 核心部分
         sample = self.samples[index]
         conversations = pre_processing_chat(sample['conversations'])
         prompt = self.create_chat_prompt(conversations)
