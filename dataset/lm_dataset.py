@@ -62,9 +62,9 @@ class SFTDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         features = Features({'conversations': [{'role': Value('string'), 'content': Value('string'), 'reasoning_content': Value('string'), 'tools': Value('string'), 'tool_calls': Value('string')}]})
-        self.samples = load_dataset('json', data_files=jsonl_path, split='train', features=features)
+        self.samples = load_dataset('json', data_files=jsonl_path, split='train', features=features) # fearures 用来确定数据格式
         self.bos_id = tokenizer(f'{tokenizer.bos_token}assistant\n', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer(f'{tokenizer.eos_token}\n', add_special_tokens=False).input_ids # 只给 assistant 设方便后边检验预测结果
 
     def __len__(self):
         return len(self.samples)
