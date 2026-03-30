@@ -29,7 +29,7 @@ def pre_processing_chat(conversations, add_system_ratio=0.2):
     return conversations
 
 def post_processing_chat(prompt_content, empty_think_ratio=0.2):
-    # 以80%概率移除空思考标签
+    # 以80%概率移除空思考标签，防止模型学习到不必要模式
     if '<think>\n\n</think>\n\n' in prompt_content and random.random() > empty_think_ratio:
         prompt_content = prompt_content.replace('<think>\n\n</think>\n\n', '')
     return prompt_content
