@@ -49,10 +49,11 @@ class PretrainDataset(Dataset):
         tokens = self.tokenizer(str(sample['text']), add_special_tokens=False, max_length=self.max_length - 2, truncation=True).input_ids
         tokens = [self.tokenizer.bos_token_id] + tokens + [self.tokenizer.eos_token_id]
         input_ids = tokens + [self.tokenizer.pad_token_id] * (self.max_length - len(tokens))
+        # 进行分词，分词后长 [BOS, 我, 喜, 欢, 你, EOS, PAD, PAD]
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         labels = input_ids.clone()
         labels[input_ids == self.tokenizer.pad_token_id] = -100
-        return input_ids, labels
+        return input_ids, labels # labels 用于后续检验预测结果
 
 
 class SFTDataset(Dataset):
