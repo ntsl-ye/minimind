@@ -46,7 +46,7 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):    # 具体训�
 
             optimizer.zero_grad(set_to_none=True)    # 清空梯度
 
-        if step % args.log_interval == 0 or step == iters:
+        if step % args.log_interval == 0 or step == iters:    # 日志打印
             spend_time = time.time() - start_time
             current_loss = loss.item() * args.accumulation_steps
             current_aux_loss = res.aux_loss.item() if res.aux_loss is not None else 0.0
@@ -55,22 +55,23 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):    # 具体训�
             eta_min = spend_time / max(step - start_step, 1) * (iters - step) // 60
             Logger(f'Epoch:[{epoch + 1}/{args.epochs}]({step}/{iters}), loss: {current_loss:.4f}, logits_loss: {current_logits_loss:.4f}, aux_loss: {current_aux_loss:.4f}, lr: {current_lr:.8f}, epoch_time: {eta_min:.1f}min')
             if wandb: wandb.log({"loss": current_loss, "logits_loss": current_logits_loss, "aux_loss": current_aux_loss, "learning_rate": current_lr, "epoch_time": eta_min})
-
+            # 形如 Epoch:[1/2](100/500), loss: 2.3456, logits_loss: 2.1234, aux_loss: 0.2222, lr: 0.00012345, epoch_time: 10.0min
+        
         if (step % args.save_interval == 0 or step == iters) and is_main_process():
-            model.eval()
+            model.eval()    # 开启 eval 模式
             moe_suffix = '_moe' if lm_config.use_moe else ''
             ckp = f'{args.save_dir}/{args.save_weight}_{lm_config.hidden_size}{moe_suffix}.pth'
-            raw_model = model.module if isinstance(model, DistributedDataParallel) else model
-            raw_model = getattr(raw_model, '_orig_mod', raw_model)
+            raw_model = model.module if isinstance(model, DistributedDataParallel) else model    # 解包1
+            raw_model = getattr(raw_model, '_orig_mod', raw_model)    # 解包2
             state_dict = raw_model.state_dict()
-            torch.save({k: v.half().cpu() for k, v in state_dict.items()}, ckp)
-            lm_checkpoint(lm_config, weight=args.save_weight, model=model, optimizer=optimizer, scaler=scaler, epoch=epoch, step=step, wandb=wandb, save_dir='../checkpoints')
-            model.train()
+            torch.save({k: v.half().cpu() for k, v in state_dict.items()}, ckp)    # 保存权重
+            lm_checkpoint(lm_config, weight=args.save_weight, model=model, optimizer=optimizer, scaler=scaler, epoch=epoch, step=step, wandb=wandb, save_dir='../checkpoints')    # 保存 checkpoint
+            model.train()    # 开启 train 模式
             del state_dict
 
         del input_ids, labels, res, loss
 
-    if last_step > start_step and last_step % args.accumulation_steps != 0:
+    if last_step > start_step and last_step % args.accumulation_steps != 0:    # 针对最后没凑满累积步数的残余梯度，进行更新
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         scaler.step(optimizer)
