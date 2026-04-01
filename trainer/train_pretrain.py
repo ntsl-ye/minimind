@@ -1,7 +1,7 @@
 import os
 import sys
 
-__package__ = "trainer"
+__package__ = "trainer"    # 告诉 Python：当前脚本逻辑上属于 trainer 这个包
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import argparse
@@ -20,32 +20,31 @@ from trainer.trainer_utils import get_lr, Logger, is_main_process, lm_checkpoint
 warnings.filterwarnings('ignore')
 
 
-def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
+def train_epoch(epoch, loader, iters, start_step=0, wandb=None):    # 具体训练逻辑
     start_time = time.time()
     last_step = start_step
     for step, (input_ids, labels) in enumerate(loader, start=start_step + 1):
-        input_ids = input_ids.to(args.device)
+        input_ids = input_ids.to(args.device)    # 将数据指定到设备上
         labels = labels.to(args.device)
         last_step = step
-        lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)
-        for param_group in optimizer.param_groups:
+        lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)    # 重新算当前学习率
+        for param_group in optimizer.param_groups:    # 更新优化器里的学习率
             param_group['lr'] = lr
 
-        with autocast_ctx:
-            res = model(input_ids, labels=labels)
+        with autocast_ctx:    
+            res = model(input_ids, labels=labels)    # 计算损失
             loss = res.loss + res.aux_loss
             loss = loss / args.accumulation_steps
 
-        scaler.scale(loss).backward()
+        scaler.scale(loss).backward()    # 梯度反向传播（进行了放大）
 
         if step % args.accumulation_steps == 0:
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-
-            scaler.step(optimizer)
+            scaler.unscale_(optimizer)    # 将梯度缩小回去
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)    # 进行梯度裁剪：如果模型所有参数梯度的整体范数太大，就把它们按比例缩小
+            scaler.step(optimizer)    # 更新参数
             scaler.update()
 
-            optimizer.zero_grad(set_to_none=True)
+            optimizer.zero_grad(set_to_none=True)    # 清空梯度
 
         if step % args.log_interval == 0 or step == iters:
             spend_time = time.time() - start_time
