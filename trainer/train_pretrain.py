@@ -80,7 +80,7 @@ def train_epoch(epoch, loader, iters, start_step=0, wandb=None):    # 具体训�
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MiniMind Pretraining")
+    parser = argparse.ArgumentParser(description="MiniMind Pretraining")    # 创建一个参数解析器对象
     parser.add_argument("--save_dir", type=str, default="../out", help="模型保存目录")
     parser.add_argument('--save_weight', default='pretrain', type=str, help="保存权重的前缀名")
     parser.add_argument("--epochs", type=int, default=2, help="训练轮数")
@@ -103,8 +103,9 @@ if __name__ == "__main__":
     parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
     parser.add_argument("--wandb_project", type=str, default="MiniMind-Pretrain", help="wandb项目名")
     parser.add_argument("--use_compile", default=0, type=int, choices=[0, 1], help="是否使用torch.compile加速（0=否，1=是）")
-    args = parser.parse_args()
-
+    args = parser.parse_args()    # 整理成一个 args 对象，这样就可以用 args.epochs、args.batch_size 等属性来获取这些参数的值
+    # 这种写法可以在运行脚本时从命令行直接给脚本传递参数，像 python train_pretrain.py --epochs 5 --batch_size 64
+    
     # ========== 1. 初始化环境和随机种子 ==========
     local_rank = init_distributed_mode()
     if dist.is_initialized(): args.device = f"cuda:{local_rank}"
@@ -146,20 +147,20 @@ if __name__ == "__main__":
         start_step = ckp_data.get('step', 0)
     
     # ========== 7. 编译和分布式包装 ==========
-    if args.use_compile == 1:
+    if args.use_compile == 1:    # 是否需要编译
         model = torch.compile(model)
         Logger('torch.compile enabled')
-    if dist.is_initialized():
+    if dist.is_initialized():    # 是否需要分布式数据并行
         model._ddp_params_and_buffers_to_ignore = {"freqs_cos", "freqs_sin"}
         model = DistributedDataParallel(model, device_ids=[local_rank])
     
     # ========== 8. 开始训练 ==========
     for epoch in range(start_epoch, args.epochs):
-        train_sampler and train_sampler.set_epoch(epoch)
+        train_sampler and train_sampler.set_epoch(epoch)    # 为分布式 Sampler 设置 epoch
         setup_seed(42 + epoch); indices = torch.randperm(len(train_ds)).tolist()
-        skip = start_step if (epoch == start_epoch and start_step > 0) else 0
+        skip = start_step if (epoch == start_epoch and start_step > 0) else 0    # 是否需要 skip
         batch_sampler = SkipBatchSampler(train_sampler or indices, args.batch_size, skip)
-        loader = DataLoader(train_ds, batch_sampler=batch_sampler, num_workers=args.num_workers, pin_memory=True)
+        loader = DataLoader(train_ds, batch_sampler=batch_sampler, num_workers=args.num_workers, pin_memory=True)    #装载 Dataloader 
         if skip > 0: 
             Logger(f'Epoch [{epoch + 1}/{args.epochs}]: 跳过前{start_step}个step，从step {start_step + 1}开始')
             train_epoch(epoch, loader, len(loader) + skip, start_step, wandb)
